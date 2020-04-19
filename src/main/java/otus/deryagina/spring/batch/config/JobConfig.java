@@ -1,6 +1,7 @@
 package otus.deryagina.spring.batch.config;
 
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
@@ -10,6 +11,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
 import org.springframework.context.annotation.Bean;
@@ -17,12 +19,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import otus.deryagina.spring.batch.mapper.ModelMapper;
 import otus.deryagina.spring.batch.nosql.domain.BookDoc;
-import otus.deryagina.spring.batch.processor.BookDocProcessor;
 import otus.deryagina.spring.batch.sql.domain.Book;
 import otus.deryagina.spring.batch.writer.ElasticsearchItemWriter;
 
 import javax.persistence.EntityManagerFactory;
 import java.util.List;
+
 
 
 @Configuration
@@ -60,24 +62,24 @@ public class JobConfig {
 
     @StepScope
     @Bean
-    public BookDocProcessor bookDocProcessor(ModelMapper modelMapper){
-        return new BookDocProcessor(modelMapper);
+    public ItemProcessor<Book,BookDoc> bookDocProcessor(ModelMapper modelMapper){
+        return modelMapper::entityToDoc;
     }
 
     @Bean
-    public Job importUserJob(Step step1) {
+    public Job importUserJob(Step fromSqlToNoSql) {
         return jobBuilderFactory.get(IMPORT_BOOK_JOB_NAME)
                 .incrementer(new RunIdIncrementer())
-                .flow(step1)
+                .flow(fromSqlToNoSql)
                 .end()
                 .listener(new JobExecutionListener() {
                     @Override
-                    public void beforeJob(JobExecution jobExecution) {
+                    public void beforeJob(@NotNull JobExecution jobExecution) {
                         logger.info("Начало job");
                     }
 
                     @Override
-                    public void afterJob(JobExecution jobExecution) {
+                    public void afterJob(@NotNull JobExecution jobExecution) {
                         logger.info("Конец job");
                     }
                 })
@@ -85,62 +87,62 @@ public class JobConfig {
     }
 
     @Bean
-    public Step fromSqlToNoSql(ElasticsearchItemWriter<BookDoc> bookDocWriter, JpaPagingItemReader<Book> bookReader, ItemProcessor bookDocProcessor) {
+    public Step fromSqlToNoSql(ItemWriter<BookDoc> bookDocWriter, JpaPagingItemReader<Book> bookReader, ItemProcessor<Book,BookDoc> bookDocProcessor) {
         return stepBuilderFactory.get("fromSqlToNoSql")
-                .chunk(CHUNK_SIZE)
+                .<Book,BookDoc>chunk(CHUNK_SIZE)
                 .reader(bookReader)
                 .processor(bookDocProcessor)
                 .writer(bookDocWriter)
-                .listener(new ItemReadListener() {
+                .listener(new ItemReadListener<>() {
                     public void beforeRead() {
                         logger.info("Начало чтения");
                     }
 
-                    public void afterRead(Object o) {
+                    public void afterRead(@NotNull Book o) {
                         logger.info(o.toString());
                         logger.info("Конец чтения");
                     }
 
-                    public void onReadError(Exception e) {
+                    public void onReadError(@NotNull Exception e) {
                         logger.info("Ошибка чтения");
                     }
                 })
-                .listener(new ItemWriteListener() {
-                    public void beforeWrite(List list) {
+                .listener(new ItemWriteListener<BookDoc>() {
+                    public void beforeWrite(@NotNull List list) {
                         logger.info("Начало записи");
                     }
 
-                    public void afterWrite(List list) {
+                    public void afterWrite(@NotNull List list) {
                         logger.info("Конец записи");
                     }
 
-                    public void onWriteError(Exception e, List list) {
+                    public void onWriteError(@NotNull Exception e, @NotNull List list) {
                         logger.info("Ошибка записи");
                     }
                 })
-                .listener(new ItemProcessListener() {
-                    public void beforeProcess(Object o) {
+                .listener(new ItemProcessListener<Book,BookDoc>() {
+                    public void beforeProcess(@NotNull Book o) {
                         logger.info("Начало обработки");
                     }
 
-                    public void afterProcess(Object o, Object o2) {
+                    public void afterProcess(@NotNull Book o, BookDoc o2) {
                         logger.info("Конец обработки");
                     }
 
-                    public void onProcessError(Object o, Exception e) {
+                    public void onProcessError(@NotNull Book o, @NotNull Exception e) {
                         logger.info("Ошбка обработки");
                     }
                 })
                 .listener(new ChunkListener() {
-                    public void beforeChunk(ChunkContext chunkContext) {
+                    public void beforeChunk(@NotNull ChunkContext chunkContext) {
                         logger.info("Начало пачки");
                     }
 
-                    public void afterChunk(ChunkContext chunkContext) {
+                    public void afterChunk(@NotNull ChunkContext chunkContext) {
                         logger.info("Конец пачки");
                     }
 
-                    public void afterChunkError(ChunkContext chunkContext) {
+                    public void afterChunkError(@NotNull ChunkContext chunkContext) {
                         logger.info("Ошибка пачки");
                     }
                 })
