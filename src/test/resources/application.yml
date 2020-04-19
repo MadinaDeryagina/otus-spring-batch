@@ -1,0 +1,22 @@
+spring:
+  batch:
+    job:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:testdb2
+    driverClassName: org.h2.Driver
+    initialization-mode: always
+    schema: classpath:schema.sql
+    data: classpath:test-data.sql
+    username: sa
+    password:
+  jpa:
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  shell:
+    interactive:
+      enabled: false
+server:
+  port: 8083

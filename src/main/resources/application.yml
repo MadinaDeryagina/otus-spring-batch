@@ -1,0 +1,23 @@
+spring:
+  batch:
+    job:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  elasticsearch:
+    rest:
+      uris: http://localhost:9200
+      username: elastic
+      password: changeme
+app:
+  output-file: output.dat
+server:
+  port: 8083
