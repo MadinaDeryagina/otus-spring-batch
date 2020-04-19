@@ -1,7 +1,6 @@
 package otus.deryagina.spring.batch.nosql.domain;
 
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -12,7 +11,7 @@ import java.util.List;
 
 
 @Data
-@Document(indexName = "library", type = "book")
+@Document(indexName = "library", type = "book", createIndex = false)
 public class BookDoc {
     @Id
     private String id;
